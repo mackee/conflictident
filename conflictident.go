@@ -1,7 +1,6 @@
 package conflictident
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"os"
@@ -83,11 +82,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if pkgIdent, ok := pkgScopeIdent[name]; ok {
 				pos := pass.Fset.Position(pkgIdent.Pos())
 				pos.Filename = strings.TrimPrefix(pos.Filename, dir+string(filepath.Separator))
-				fmt.Printf(
-					"conflict identifier name of '%s' by %s.\n",
-					name,
-					pos,
-				)
 				pass.Reportf(
 					ident.Pos(),
 					"conflict identifier name of '%s' by %s.",
