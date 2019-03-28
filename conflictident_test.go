@@ -16,3 +16,8 @@ func TestPackageIdent(t *testing.T) {
 	testdata := analysistest.TestData()
 	analysistest.Run(t, testdata, conflictident.Analyzer, "pkgident")
 }
+
+func TestMultiFile(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "multifile")
+}

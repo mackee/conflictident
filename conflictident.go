@@ -39,6 +39,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.ValueSpec)(nil),
 		(*ast.FuncDecl)(nil),
 		(*ast.AssignStmt)(nil),
+		(*ast.ImportSpec)(nil),
+		(*ast.SelectorExpr)(nil),
 		(*ast.Ident)(nil),
 	}
 
@@ -48,17 +50,19 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	pkgScopeIdent := map[string]ast.Node{}
+	fileScopeIdent := map[token.Pos]map[string]ast.Node{}
 	scopeIdent := map[token.Pos]map[string]ast.Node{}
 	inspect.WithStack(nodeFilter, func(n ast.Node, push bool, stack []ast.Node) bool {
 		switch n := n.(type) {
 		case *ast.File:
+			fileScopeIdent[n.Pos()] = map[string]ast.Node{}
 			for _, imp := range n.Imports {
 				if imp.Name != nil && imp.Name.Name != "_" {
-					pkgScopeIdent[imp.Name.Name] = imp
+					fileScopeIdent[n.Pos()][imp.Name.Name] = imp
 				} else {
 					v, _ := strconv.Unquote(imp.Path.Value)
 					if v != "_" {
-						pkgScopeIdent[imports[v]] = imp
+						fileScopeIdent[n.Pos()][imports[v]] = imp
 					}
 				}
 			}
@@ -74,7 +78,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			return true
 		case *ast.AssignStmt:
 			return n.Tok == token.DEFINE
+		case *ast.ImportSpec:
+			return false
+		case *ast.SelectorExpr:
+			return false
 		case *ast.Ident:
+			if !push {
+				return false
+			}
 		IOUTER:
 			for i := len(stack) - 1; i >= 0; i-- {
 				pn := stack[i]
@@ -97,8 +108,19 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 	for _, idents := range scopeIdent {
 		for name, ident := range idents {
+			var hasConflict bool
+			var conflictPos token.Pos
 			if pkgIdent, ok := pkgScopeIdent[name]; ok {
-				pos := pass.Fset.Position(pkgIdent.Pos())
+				hasConflict = true
+				conflictPos = pkgIdent.Pos()
+			}
+			f := pass.Fset.File(ident.Pos())
+			if fileIdent, ok := fileScopeIdent[f.Pos(0)][name]; ok {
+				hasConflict = true
+				conflictPos = fileIdent.Pos()
+			}
+			if hasConflict {
+				pos := pass.Fset.Position(conflictPos)
 				pos.Filename = strings.TrimPrefix(pos.Filename, dir+string(filepath.Separator))
 				pass.Reportf(
 					ident.Pos(),
