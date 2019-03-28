@@ -8,8 +8,8 @@ const (
 )
 
 func cnt() int {
-	e := enumC
-	if e == enumA {
+	consttest := enumC
+	if consttest == enumA {
 		enumD := 1 // want "conflict identifier name of 'enumD' by testdata/src/consttest/consttest.go:7:2"
 		_ = enumD
 		return enumA

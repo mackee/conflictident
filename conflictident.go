@@ -123,7 +123,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				return false
 			}
 			switch stack[len(stack)-2].(type) {
-			case *ast.CaseClause, *ast.IfStmt, *ast.BinaryExpr:
+			case *ast.FuncDecl, *ast.CaseClause, *ast.IfStmt, *ast.BinaryExpr:
 				return false
 			}
 			dependIdent(n, stack, pkgScopeIdent, scopeIdent)
@@ -131,6 +131,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 		return false
 	})
+
+	delete(pkgScopeIdent, pass.Pkg.Name())
 
 	dir, err := os.Getwd()
 	if err != nil {
