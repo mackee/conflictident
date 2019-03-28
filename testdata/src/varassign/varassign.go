@@ -7,3 +7,8 @@ func main() {
 	_ = hoge
 	_ = fuga
 }
+
+func fn1() {
+	var h []*hoge
+	_ = h
+}

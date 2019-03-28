@@ -41,6 +41,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.AssignStmt)(nil),
 		(*ast.ImportSpec)(nil),
 		(*ast.SelectorExpr)(nil),
+		(*ast.CompositeLit)(nil),
+		(*ast.CallExpr)(nil),
+		(*ast.ReturnStmt)(nil),
+		(*ast.ExprStmt)(nil),
+		(*ast.BinaryExpr)(nil),
+		(*ast.Field)(nil),
 		(*ast.Ident)(nil),
 	}
 
@@ -71,32 +77,56 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if _, ok := scopeIdent[n.Pos()]; !ok {
 				scopeIdent[n.Pos()] = map[string]ast.Node{}
 			}
+			// receiver
+			if n.Recv != nil {
+				for _, field := range n.Recv.List {
+					for _, name := range field.Names {
+						scopeIdent[n.Pos()][name.Name] = name
+					}
+				}
+			}
+			// arguments
+			for _, field := range n.Type.Params.List {
+				for _, name := range field.Names {
+					scopeIdent[n.Pos()][name.Name] = name
+				}
+			}
 			return true
 		case *ast.TypeSpec:
-			return true
-		case *ast.ValueSpec:
-			return true
-		case *ast.AssignStmt:
-			return n.Tok == token.DEFINE
-		case *ast.ImportSpec:
+			dependIdent(n.Name, stack, pkgScopeIdent, scopeIdent)
 			return false
-		case *ast.SelectorExpr:
+		case *ast.ValueSpec:
+			for _, name := range n.Names {
+				dependIdent(name, stack, pkgScopeIdent, scopeIdent)
+			}
+			return false
+		case *ast.AssignStmt:
+			if n.Tok != token.DEFINE {
+				return false
+			}
+			for _, expr := range n.Lhs {
+				if idt, ok := expr.(*ast.Ident); ok {
+					dependIdent(idt, stack, pkgScopeIdent, scopeIdent)
+				}
+			}
+		case
+			*ast.CallExpr,
+			*ast.ImportSpec,
+			*ast.SelectorExpr,
+			*ast.Field,
+			*ast.ReturnStmt,
+			*ast.ExprStmt,
+			*ast.CompositeLit:
 			return false
 		case *ast.Ident:
 			if !push {
 				return false
 			}
-		IOUTER:
-			for i := len(stack) - 1; i >= 0; i-- {
-				pn := stack[i]
-				switch pnt := pn.(type) {
-				case *ast.File:
-					pkgScopeIdent[n.Name] = n
-				case *ast.FuncDecl:
-					scopeIdent[pnt.Pos()][n.Name] = n
-					break IOUTER
-				}
+			switch stack[len(stack)-2].(type) {
+			case *ast.CaseClause, *ast.IfStmt, *ast.BinaryExpr:
+				return false
 			}
+			dependIdent(n, stack, pkgScopeIdent, scopeIdent)
 			return false
 		}
 		return false
@@ -133,4 +163,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+func dependIdent(n *ast.Ident, stack []ast.Node, pkgScopeIdent map[string]ast.Node, scopeIdent map[token.Pos]map[string]ast.Node) {
+	for i := len(stack) - 1; i >= 0; i-- {
+		pn := stack[i]
+		switch pnt := pn.(type) {
+		case *ast.File:
+			pkgScopeIdent[n.Name] = n
+		case *ast.FuncDecl:
+			scopeIdent[pnt.Pos()][n.Name] = n
+			return
+		}
+	}
 }

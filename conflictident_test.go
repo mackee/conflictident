@@ -9,7 +9,12 @@ import (
 
 func Test(t *testing.T) {
 	testdata := analysistest.TestData()
-	analysistest.Run(t, testdata, conflictident.Analyzer, "varspec", "varassign", "funcarg")
+	analysistest.Run(t, testdata, conflictident.Analyzer, "varspec", "funcarg")
+}
+
+func TestVarassign(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "varassign")
 }
 
 func TestPackageIdent(t *testing.T) {
@@ -20,4 +25,24 @@ func TestPackageIdent(t *testing.T) {
 func TestMultiFile(t *testing.T) {
 	testdata := analysistest.TestData()
 	analysistest.Run(t, testdata, conflictident.Analyzer, "multifile")
+}
+
+func TestReceiver(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "receiver")
+}
+
+func TestUse(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "use")
+}
+
+func TestBuiltin(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "builtintest")
+}
+
+func TestConst(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "consttest")
 }
