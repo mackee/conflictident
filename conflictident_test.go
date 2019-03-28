@@ -11,3 +11,8 @@ func Test(t *testing.T) {
 	testdata := analysistest.TestData()
 	analysistest.Run(t, testdata, conflictident.Analyzer, "varspec", "varassign", "funcarg")
 }
+
+func TestPackageIdent(t *testing.T) {
+	testdata := analysistest.TestData()
+	analysistest.Run(t, testdata, conflictident.Analyzer, "pkgident")
+}

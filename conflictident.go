@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 )
 
+// Analyzer is analysis.Analyzer settings for conflictident
 var Analyzer = &analysis.Analyzer{
 	Name: "conflictident",
 	Doc:  Doc,
@@ -21,7 +23,8 @@ var Analyzer = &analysis.Analyzer{
 	},
 }
 
-const Doc = "conflictident is ..."
+// Doc is description for the CLI
+const Doc = "conflictident is linter that discover conflicts ident"
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
@@ -39,11 +42,26 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.Ident)(nil),
 	}
 
+	imports := map[string]string{}
+	for _, imp := range pass.Pkg.Imports() {
+		imports[imp.Path()] = imp.Name()
+	}
+
 	pkgScopeIdent := map[string]ast.Node{}
 	scopeIdent := map[token.Pos]map[string]ast.Node{}
 	inspect.WithStack(nodeFilter, func(n ast.Node, push bool, stack []ast.Node) bool {
 		switch n := n.(type) {
 		case *ast.File:
+			for _, imp := range n.Imports {
+				if imp.Name != nil && imp.Name.Name != "_" {
+					pkgScopeIdent[imp.Name.Name] = imp
+				} else {
+					v, _ := strconv.Unquote(imp.Path.Value)
+					if v != "_" {
+						pkgScopeIdent[imports[v]] = imp
+					}
+				}
+			}
 			return true
 		case *ast.FuncDecl:
 			if _, ok := scopeIdent[n.Pos()]; !ok {
